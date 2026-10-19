@@ -1,0 +1,42 @@
+{
+  "name": "@local/airmon-sidebar",
+  "version": "0.2.0",
+  "type": "module",
+  "description": "airmon 机场监控侧边栏面板：KPI/卡片详情(节点/IP/走势/探活/画像)/到期/告警/华为/节点总表/机场库(免费候选+评测档案+一键接入)/知识库/分析对比/运行台账",
+  "icon": "./icon.svg",
+  "exports": {
+    ".": "./index.js",
+    "./client": "./client.js",
+    "./icon": "./icon.svg",
+    "./panel": "./panel.html",
+    "./locale/*.json": "./locale/*.json",
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "index.js",
+    "logic.js",
+    "client.js",
+    "panel.html",
+    "icon.svg",
+    "cordis.patch.yml",
+    "locale/"
+  ],
+  "engines": {
+    "dsh": "*"
+  },
+  "dsh": {
+    "bundle": {
+      "patch": "./cordis.patch.yml"
+    },
+    "client": {
+      "platform": "web",
+      "immediately": true,
+      "inject": [
+        "@deepseek-ai/dsh-client-ui-slots",
+        "@deepseek-ai/dsh-client-ui-sidebar",
+        "@deepseek-ai/dsh-client-ui-layout",
+        "@deepseek-ai/dsh-client-locale"
+      ]
+    }
+  }
+}

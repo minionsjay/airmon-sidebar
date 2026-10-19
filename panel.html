@@ -1,0 +1,1160 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>机场监控 · 侧边栏面板</title>
+<style>
+/* ============================================================
+   机场监控侧边栏面板 —— DSW 主题 token 版
+   规则：所有颜色经 var(--dsw-*, 回退值) 声明。
+   在 DSW 内吃真实 token；双击独立打开时吃 neutral-bluish 回退值。
+   禁止渐变；主按钮=黑 #0f1115 / hover #43454a；业务蓝 #4176e6 仅作强调。
+   ============================================================ */
+:root{
+  --font: -apple-system,"Segoe UI",system-ui,"PingFang SC","Microsoft YaHei",sans-serif;
+  --bg:        var(--dsw-alias-bg-base, #ffffff);
+  --layer1:    var(--dsw-alias-bg-layer-1, #f9fafb);
+  --layer2:    var(--dsw-alias-bg-layer-2, #f1f3f5);
+  --border:    var(--dsw-alias-border-l1, #ebeef2);
+  --tx:        var(--dsw-alias-label-primary, #0f1115);
+  --tx-2:      var(--dsw-alias-label-secondary, #61666b);
+  --tx-3:      var(--dsw-alias-label-tertiary, #81858c);
+  --brand:     var(--dsw-alias-brand-primary, #4176e6);
+  --btn:       var(--dsw-alias-button-primary-fill, #0f1115);
+  --btn-hover: var(--dsw-alias-button-primary-hover, #43454a);
+  --ok:        var(--dsw-alias-state-success-primary, #178a50);
+  --warn:      var(--dsw-alias-state-warn-primary, #b7791f);
+  --err:       var(--dsw-alias-state-error-primary, #d64545);
+  --ring:      var(--dsw-focus-ring-color, #4176e6);
+}
+*{box-sizing:border-box}
+html,body{margin:0;padding:0}
+body{background:var(--bg);color:var(--tx);font:13px/1.5 var(--font);
+  -webkit-font-smoothing:antialiased}
+#app{display:flex;flex-direction:column;min-height:100vh}
+
+/* ---------- 头部 ---------- */
+.hd{display:flex;align-items:center;justify-content:space-between;gap:8px;
+  padding:10px 12px;border-bottom:1px solid var(--border);position:sticky;top:0;
+  background:var(--bg);z-index:5}
+.hd-t{display:flex;align-items:center;gap:7px;font-size:14px;font-weight:600;min-width:0}
+.hd-t .name{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.dot{width:8px;height:8px;border-radius:50%;background:var(--ok);flex:none}
+.dot.err{background:var(--err)}.dot.warn{background:var(--warn)}
+.btn{appearance:none;border:0;border-radius:7px;padding:5px 14px;font-size:12px;
+  font-weight:500;cursor:pointer;font-family:inherit;color:#fff;background:var(--btn);
+  transition:background .15s}
+.btn:hover{background:var(--btn-hover)}
+.btn:focus-visible{outline:2px solid var(--ring);outline-offset:2px}
+.btn[disabled]{opacity:.55;cursor:default}
+
+/* ---------- KPI 条 ---------- */
+.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(88px,1fr));gap:6px;
+  padding:10px 12px 4px}
+.kpi{background:var(--layer1);border:1px solid var(--border);border-radius:8px;
+  padding:6px 9px;min-width:0}
+.kpi b{display:block;font-size:16px;line-height:1.25;font-weight:600}
+.kpi small{display:block;color:var(--tx-3);font-size:11px}
+.kpi.warn b{color:var(--warn)}.kpi.err b{color:var(--err)}.kpi.acc b{color:var(--brand)}
+.kpi,.card{cursor:pointer}
+.kpi:hover,.card:hover{border-color:var(--brand)}
+.card.on{border-color:var(--brand)}
+
+/* ---------- Modal ---------- */
+.ovl{position:fixed;inset:0;background:rgba(0,0,0,.42);z-index:50;display:flex;
+  align-items:flex-start;justify-content:center;padding:32px 16px}
+.ovl[hidden]{display:none}
+.modal{background:var(--bg);border:1px solid var(--border);border-radius:12px;
+  width:min(680px,100%);max-height:calc(100vh - 64px);overflow:auto;
+  box-shadow:0 12px 40px rgba(0,0,0,.28)}
+.m-h{display:flex;align-items:center;gap:8px;padding:12px 14px;
+  border-bottom:1px solid var(--border);position:sticky;top:0;background:var(--bg);z-index:1}
+.m-h b{font-size:14.5px}
+.m-x{margin-left:auto;appearance:none;border:0;background:none;cursor:pointer;
+  font:inherit;font-size:16px;color:var(--tx-3);padding:2px 8px;border-radius:6px}
+.m-x:hover{background:var(--layer1);color:var(--tx)}
+.m-b{padding:12px 14px;display:flex;flex-direction:column;gap:10px}
+.m-sec{font-size:11px;font-weight:600;color:var(--tx-3);letter-spacing:.04em;
+  text-transform:uppercase}
+/* 弹窗内节点表 + 走势 */
+#m-body table{width:100%;border-collapse:collapse;font-size:12px}
+#m-body th{position:sticky;top:0;background:var(--bg);text-align:left;padding:4px 6px;
+  color:var(--tx-3);font-weight:500;border-bottom:1px solid var(--border);z-index:1}
+#m-body td{padding:3px 6px;border-bottom:1px solid var(--border);
+  font-family:ui-monospace,Menlo,Consolas,monospace;font-size:11.5px;color:var(--tx-2);
+  max-width:230px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.hbars{display:flex;align-items:flex-end;gap:2px;height:38px;margin:2px 0}
+.hbars i{flex:1;background:var(--acc,#4176e6);opacity:.75;min-height:2px;border-radius:1px}
+.hbars i.zero{background:var(--wn,#d29922);opacity:.9}
+.spin{display:inline-block;width:12px;height:12px;border:2px solid var(--border);
+  border-top-color:var(--acc,#4176e6);border-radius:50%;animation:mspin 1s linear infinite;
+  vertical-align:-2px;margin-right:6px}
+@keyframes mspin{to{transform:rotate(360deg)}}
+
+/* ---------- Tabs ---------- */
+.tabs{display:flex;gap:2px;padding:6px 12px 0;border-bottom:1px solid var(--border);
+  position:sticky;top:41px;background:var(--bg);z-index:4}
+.tab{appearance:none;border:0;background:none;cursor:pointer;font:inherit;font-size:12.5px;
+  color:var(--tx-3);padding:5px 9px 7px;border-bottom:2px solid transparent;margin-bottom:-1px}
+.tab:hover{color:var(--tx-2)}
+.tab.on{color:var(--tx);border-bottom-color:var(--brand);font-weight:600}
+.tab:focus-visible{outline:2px solid var(--ring);outline-offset:-2px;border-radius:4px}
+.tab .n{font-size:11px;color:var(--tx-3);margin-left:3px}
+main{flex:1;padding:10px 12px 16px}
+section[hidden]{display:none}
+
+/* ---------- 工具条 ---------- */
+.tools{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px}
+.search{flex:1;min-width:120px;border:1px solid var(--border);border-radius:7px;
+  padding:5px 9px;font:12px var(--font);color:var(--tx);background:var(--layer1)}
+.search:focus{outline:2px solid var(--ring);outline-offset:-1px;background:var(--bg)}
+select{border:1px solid var(--border);border-radius:7px;padding:5px 6px;font:12px var(--font);
+  color:var(--tx);background:var(--layer1)}
+.chipbar{display:flex;gap:5px;flex-wrap:wrap;margin-bottom:9px}
+.fchip{appearance:none;border:1px solid var(--border);background:var(--layer1);
+  border-radius:999px;padding:2px 10px;font:11.5px var(--font);color:var(--tx-2);cursor:pointer}
+.fchip:hover{color:var(--tx)}
+.fchip.on{background:var(--btn);border-color:var(--btn);color:#fff;font-weight:500}
+
+/* ---------- 卡片网格 ---------- */
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(232px,1fr));gap:8px}
+.card{border:1px solid var(--border);border-left:3px solid var(--ok);border-radius:9px;
+  background:var(--bg);padding:8px 10px;display:flex;flex-direction:column;gap:6px;min-width:0}
+.card.st-warn{border-left-color:var(--warn)}
+.card.st-err{border-left-color:var(--err)}
+.card:hover{border-color:var(--brand);border-left-color:var(--brand)}
+.c-h{display:flex;align-items:center;gap:6px;min-width:0}
+.c-slug{font-weight:600;font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.c-badge{margin-left:auto;flex:none;font-size:11px;color:var(--tx-2);background:var(--layer2);
+  border-radius:5px;padding:1px 6px}
+.c-meta{font-size:11px;color:var(--tx-3);display:flex;gap:8px;flex-wrap:wrap}
+.tags{display:flex;gap:4px;flex-wrap:wrap}
+.tag{font-size:10.5px;border:1px solid var(--border);color:var(--tx-2);border-radius:999px;
+  padding:0 7px;line-height:17px;max-width:150px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.tag.up{color:var(--ok);border-color:var(--ok)}
+.tag.dn{color:var(--err);border-color:var(--err)}
+.tag.wn{color:var(--warn);border-color:var(--warn)}
+.tag.er{color:var(--err);border-color:var(--err)}
+.tag.acc{color:var(--brand);border-color:var(--brand)}
+.bar{height:4px;border-radius:2px;background:var(--layer2);overflow:hidden;position:relative}
+.bar i{position:absolute;inset:0 auto 0 0;background:var(--brand);border-radius:2px}
+.bar i.w{background:var(--warn)}.bar i.e{background:var(--err)}
+.u-row{display:flex;justify-content:space-between;font-size:10.5px;color:var(--tx-3)}
+
+/* ---------- 列表区（到期/告警/华为/运行） ---------- */
+.panel-box{border:1px solid var(--border);border-radius:9px;background:var(--bg);
+  margin-bottom:10px;overflow:hidden}
+.pb-h{padding:7px 11px;font-size:12px;font-weight:600;color:var(--tx-2);
+  background:var(--layer1);border-bottom:1px solid var(--border)}
+.pb-b{padding:8px 11px}
+.row{display:flex;align-items:baseline;gap:8px;padding:5px 0;border-bottom:1px dashed var(--border);
+  font-size:12px;min-width:0}
+.row:last-child{border-bottom:0}
+.row .k{flex:none;font-weight:600;min-width:74px}
+.row .v{color:var(--tx-2);min-width:0;overflow:hidden;text-overflow:ellipsis}
+.row .r{margin-left:auto;flex:none}
+.exp-table{width:100%;border-collapse:collapse;font-size:12px}
+.exp-table th{color:var(--tx-3);font-weight:500;text-align:left;padding:3px 6px;
+  border-bottom:1px solid var(--border);font-size:11px;white-space:nowrap}
+.exp-table td{padding:5px 6px;border-bottom:1px solid var(--border);vertical-align:middle}
+.exp-table tr:last-child td{border-bottom:0}
+.exp-table .num{text-align:right;white-space:nowrap}
+.mini-bar{width:64px;height:4px;border-radius:2px;background:var(--layer2);position:relative;
+  display:inline-block;vertical-align:middle;margin-right:6px;overflow:hidden}
+.mini-bar i{position:absolute;inset:0 auto 0 0;background:var(--brand);border-radius:2px}
+.mini-bar i.w{background:var(--warn)}.mini-bar i.e{background:var(--err)}
+.muted{color:var(--tx-3)}
+.note{font-size:11px;color:var(--tx-3);background:var(--layer1);border:1px dashed var(--border);
+  border-radius:8px;padding:7px 10px;margin-top:8px}
+.banner{font-size:11.5px;border:1px solid var(--warn);color:var(--warn);border-radius:8px;
+  padding:6px 10px;margin-bottom:10px}
+.empty{color:var(--tx-3);font-size:12px;padding:14px 0;text-align:center}
+
+/* ---------- footer ---------- */
+footer{border-top:1px solid var(--border);padding:7px 12px;font-size:10.5px;color:var(--tx-3);
+  display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+.src{border:1px solid var(--border);border-radius:999px;padding:0 8px;line-height:16px}
+.src.live{color:var(--ok);border-color:var(--ok)}
+.src.snap{color:var(--warn);border-color:var(--warn)}
+
+/* ---------- 通用数据表（节点/机场库） ---------- */
+.ntab{width:100%;border-collapse:collapse;font-size:11.5px}
+.ntab th{color:var(--tx-3);font-weight:500;text-align:left;padding:3px 7px;
+  border-bottom:1px solid var(--border);font-size:11px;white-space:nowrap;
+  position:sticky;top:0;background:var(--bg);z-index:1}
+.ntab td{padding:4px 7px;border-bottom:1px solid var(--border);vertical-align:middle;
+  white-space:nowrap;max-width:230px;overflow:hidden;text-overflow:ellipsis}
+.ntab tbody tr:last-child td{border-bottom:0}
+.ntab tbody tr[data-slug]{cursor:pointer}
+.ntab tbody tr[data-slug]:hover td{background:var(--layer1)}
+.ntab tbody tr[data-arch]{cursor:pointer}
+.ntab tbody tr[data-arch]:hover td{background:var(--layer1)}
+.j-slug{cursor:pointer;text-decoration:underline dotted var(--brand)}
+.j-slug:hover{color:var(--brand)}
+.toast{position:fixed;bottom:16px;left:50%;transform:translateX(-50%);
+  background:var(--tx-1,#333);color:#fff;padding:8px 16px;border-radius:9px;
+  font-size:12px;z-index:80;box-shadow:0 4px 16px rgba(0,0,0,.25);max-width:88%}
+.span-b{border:1px solid var(--border);background:transparent;color:var(--tx-2);
+  border-radius:6px;font-size:10.5px;padding:1px 7px;margin-left:4px;cursor:pointer}
+.span-b.on{background:var(--brand);color:#fff;border-color:var(--brand)}
+.an-grid{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:10px}
+.an-grid>.panel-box{flex:1;min-width:250px}
+.an-bar{flex:1;height:6px;background:var(--layer2);border-radius:3px;margin-left:8px;overflow:hidden;min-width:40px}
+.an-bar i{display:block;height:100%;background:var(--brand);opacity:.55;border-radius:3px}
+.an-line{width:100%;height:150px;display:block}
+.an-exp .tag{margin:0 6px 4px 0;display:inline-block}
+.btn.xs{font-size:10.5px;padding:1px 8px}
+/* 手机适配：窄屏单列/横滚/紧凑 */
+@media (max-width: 640px){
+  .tabs{flex-wrap:nowrap;overflow-x:auto;-webkit-overflow-scrolling:touch;scrollbar-width:none}
+  .tabs::-webkit-scrollbar{display:none}
+  .kpis{grid-template-columns:repeat(2,1fr)}
+  .grid{grid-template-columns:1fr}
+  .an-grid{flex-direction:column}
+  .an-grid>.panel-box{min-width:0}
+  .ntab th,.ntab td{padding:3px 4px;font-size:11px}
+  .search{max-width:none;flex:1}
+  .m-h{font-size:13px}
+}
+</style>
+</head>
+<body>
+<div id="app">
+  <header class="hd">
+    <div class="hd-t"><span class="dot" id="hd-dot"></span><span class="name">机场监控</span>
+      <span class="muted" style="font-weight:400;font-size:11px" id="hd-base"></span></div>
+    <div style="display:flex;gap:6px;align-items:center">
+      <button class="btn" id="refresh-all" title="触发一轮采集（全部订阅型机场，约 15-30 分钟）">刷新全部</button>
+      <button class="btn" id="refresh">刷新</button>
+    </div>
+  </header>
+
+  <div class="kpis" id="kpis"></div>
+
+  <nav class="tabs" id="tabs">
+    <button class="tab on" data-tab="ov">总览</button>
+    <button class="tab" data-tab="ex">到期<span class="n" id="n-ex"></span></button>
+    <button class="tab" data-tab="al">告警<span class="n" id="n-al"></span></button>
+    <button class="tab" data-tab="hw">华为<span class="n" id="n-hw"></span></button>
+    <button class="tab" data-tab="nodes">节点<span class="n" id="n-nodes"></span></button>
+    <button class="tab" data-tab="lib">机场库</button>
+    <button class="tab" data-tab="kn">知识</button>
+    <button class="tab" data-tab="an">分析</button>
+    <button class="tab" data-tab="rn">运行</button>
+  </nav>
+
+  <main>
+    <section id="tab-ov">
+      <div class="tools">
+        <input class="search" id="q" type="search" placeholder="搜索机场 slug…">
+        <select id="sort">
+          <option value="def">默认排序</option>
+          <option value="nodes">按节点数</option>
+          <option value="expire">按到期</option>
+          <option value="usage">按用量</option>
+        </select>
+      </div>
+      <div class="chipbar" id="filters">
+        <button class="fchip on" data-f="all">全部</button>
+        <button class="fchip" data-f="delta">有变更</button>
+        <button class="fchip" data-f="zero">0 拉取</button>
+        <button class="fchip" data-f="expiring">临期/过期</button>
+        <button class="fchip" data-f="hw">华为命中</button>
+        <button class="fchip" data-f="stale">数据滞后</button>
+      </div>
+      <div class="grid" id="grid"></div>
+      <div class="empty" id="grid-empty" hidden>没有符合条件的机场</div>
+    </section>
+
+    <section id="tab-ex" hidden>
+      <div class="panel-box"><div class="pb-h">套餐到期（按剩余天数升序）</div>
+        <div class="pb-b" style="padding:2px 6px"><table class="exp-table" id="exp-t"></table></div></div>
+      <div class="note">天数取自 quota.days_left；「长期」表示未登记到期日。红色 = 已过期，黄 = 30 天内。</div>
+    </section>
+
+    <section id="tab-al" hidden>
+      <div class="tools"><input class="search" id="alq" type="search" placeholder="过滤：机场名 / 内容…" style="max-width:200px"></div>
+      <div class="panel-box"><div class="pb-h">告警流（最近在前）</div><div class="pb-b" id="al-list"></div></div>
+    </section>
+
+    <section id="tab-hw" hidden>
+      <div class="panel-box"><div class="pb-h">当前命中</div><div class="pb-b" id="hw-cur"></div></div>
+      <div class="panel-box"><div class="pb-h">命中台账（历史累计）</div><div class="pb-b" id="hw-ledger"></div></div>
+      <div class="note">华为命中区：按 RDAP/ASN 规则识别落在华为云的节点。evidence 为公开注册组织名，不含端点。</div>
+    </section>
+
+    <section id="tab-rn" hidden>
+      <div id="rn-inflight"></div>
+      <div class="panel-box"><div class="pb-h">最近一轮运行</div><div class="pb-b" id="rn-box"></div></div>
+      <div class="panel-box"><div class="pb-h">运行台账（last_run.json · 含退出码依据）</div><div class="pb-b" id="rn-last"></div></div>
+    </section>
+
+    <section id="tab-nodes" hidden>
+      <div class="tools">
+        <input class="search" id="nq" type="search" placeholder="搜索 名称/服务器/IP/协议…">
+        <select id="na"></select>
+        <span class="muted" style="font-size:11px" id="n-count"></span>
+      </div>
+      <div class="panel-box"><div class="pb-b" style="padding:2px 6px;max-height:62vh;overflow:auto">
+        <table class="ntab" id="nd-t"></table></div></div>
+      <div class="note" id="nd-note"></div>
+    </section>
+
+    <section id="tab-lib" hidden>
+      <div class="tools">
+        <input class="search" id="lq" type="search" placeholder="搜索机场/域名…">
+      </div>
+      <div class="panel-box"><div class="pb-h">监控中 <span class="muted" id="lib-mon-n"></span></div>
+        <div class="pb-b" style="padding:2px 6px;max-height:36vh;overflow:auto">
+          <table class="ntab" id="lib-mon"></table></div></div>
+      <div class="panel-box"><div class="pb-h">免费候选 <span class="muted" id="lib-free-n"></span></div>
+        <div class="pb-b" id="lib-free"></div></div>
+      <div class="panel-box"><div class="pb-h">推荐站档案 <span class="muted" id="lib-sites-n"></span></div>
+        <div class="pb-b" style="padding:2px 6px;max-height:30vh;overflow:auto">
+          <table class="ntab" id="lib-sites"></table></div></div>
+      <div class="note">机场库三区：①监控中 47 家（点击行看详情/节点）；②免费候选（sitewatch 域名探测，跑 python -m airmon.sitewatch 更新）；③推荐站 316 家档案（名称/价格/域名线索，供后续扩充监控）。</div>
+    </section>
+
+    <section id="tab-an" hidden>
+      <div class="tools"><span class="muted" style="font-size:11px" id="an-note"></span></div>
+      <div id="an-body"></div>
+    </section>
+
+    <section id="tab-kn" hidden>
+      <div class="tools"><span class="muted" style="font-size:11px">协议原理 · 协议对比 · 客户端选择 · 行业观察 —— 摘自机场推荐站科普栏目，点标题看全文分节</span></div>
+      <div id="kn-body"></div>
+    </section>
+  </main>
+
+  <footer>
+    <span id="ft-gen"></span>
+    <span class="src" id="ft-src">…</span>
+    <span>白名单脱敏数据</span>
+  </footer>
+</div>
+
+<div class="ovl" id="modal" hidden>
+  <div class="modal" role="dialog" aria-modal="true">
+    <div class="m-h"><b id="m-title"></b>
+      <button class="btn" id="m-refresh" style="margin-left:auto" title="重新采集该机场（订阅型）">重新获取</button>
+      <button class="m-x" id="m-x" title="关闭">✕</button></div>
+    <div class="m-b" id="m-body"></div>
+  </div>
+</div>
+
+<!-- 内嵌快照：file:// 双击打开时的数据源（与 data.json 同源生成，零机密） -->
+<script type="application/json" id="airmon-data">[]</script>
+
+<script>
+'use strict';
+/* ================= 数据装载 =================
+   优先级：内嵌快照（立即渲染）→ postMessage 桥（插件模式，parent 代取
+   /airmon-sidebar/api/data 实时过滤结果）→ fetch('./data.json')（http 静态托管模式）。 */
+const EMBED = JSON.parse(document.getElementById('airmon-data').textContent);
+let DATA = EMBED, SRC = 'embedded';
+
+function loadData(fast) {
+  if (!fast) paint(DATA, SRC);                       // 先按现有数据重绘（按钮反馈）
+  let settled = false;
+  const reqId = 'r' + Date.now();
+  const onMsg = (e) => {
+    const d = e.data;
+    if (!d || d.type !== 'airmon:data' || d.id !== reqId || !d.payload) return;
+    if (e.source !== window.parent) return;      // 只接受父窗口的应答
+    settled = true; window.removeEventListener('message', onMsg);
+    DATA = d.payload; SRC = 'live'; paint(DATA, SRC);
+  };
+  window.addEventListener('message', onMsg);
+  try { window.parent.postMessage({ type: 'airmon:get', id: reqId }, '*'); } catch (_) {}
+  setTimeout(() => {
+    window.removeEventListener('message', onMsg);
+    if (settled) return;
+    if (location.protocol.indexOf('http') === 0) {
+      fetch('data.json', { cache: 'no-cache' })
+        .then(r => r.ok ? r.json() : null)
+        .then(j => { if (j) { DATA = j; SRC = 'fetch'; paint(DATA, SRC); } })
+        .catch(() => {});
+    }
+  }, 1100);
+}
+document.getElementById('refresh').addEventListener('click', () => loadData(false));
+setInterval(() => { if (SRC === 'live') loadData(false); }, 10 * 60 * 1000);
+
+/* ================= 渲染 ================= */
+const $ = id => document.getElementById(id);
+const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g,
+  c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+const state = { tab: 'ov', q: '', f: 'all', sort: 'def', alq: '', cmpA: '', cmpB: '' };
+let PROBE_BY_SLUG = {}, IDC_BY_SLUG = {}, LASTRUN = null;
+
+function daysChip(a) {
+  const q = a.quota; if (!q) return '';
+  if (q.unlimited) return '<span class="tag">不限量</span>';
+  const d = q.days_left;
+  if (d == null) return '<span class="tag">长期</span>';
+  if (d < 0) return `<span class="tag er">已过期 ${-d} 天</span>`;
+  if (d <= 30) return `<span class="tag wn">${d} 天到期</span>`;
+  return `<span class="tag">${d} 天</span>`;
+}
+function usageHtml(a) {
+  const q = a.quota; if (!q || q.used_pct == null || q.total_gb == null) return '';
+  const p = Math.max(0, Math.min(100, q.used_pct));
+  const cls = p > 90 ? 'e' : (p > 70 ? 'w' : '');
+  const used = q.used_gb == null ? '—' : (+q.used_gb).toFixed(1);
+  const tot = q.unlimited ? '∞' : (+q.total_gb).toFixed(0);
+  return `<div class="u-row"><span>用量 ${esc(used)}/${esc(tot)} GB</span><span>${p.toFixed(1)}%</span></div>
+    <div class="bar"><i class="${cls}" style="width:${p}%"></i></div>`;
+}
+function cardHtml(a) {
+  const st = a.status === 'ok' ? '' : (a.status === 'stale' ? 'st-err' : 'st-warn');
+  const tags = [];
+  if (a.added_n > 0) tags.push(`<span class="tag up">+${a.added_n}</span>`);
+  if (a.removed_n > 0) tags.push(`<span class="tag dn">−${a.removed_n}</span>`);
+  if (a.pull_zero) tags.push('<span class="tag wn">0 拉取</span>');
+  if (a.status === 'stale') tags.push('<span class="tag er">数据滞后</span>');
+  if (a.hit_n > 0) tags.push(`<span class="tag acc">华为×${a.hit_n}</span>`);
+  (a.proto_top || []).slice(0, 3).forEach(p =>
+    tags.push(`<span class="tag" title="协议">${esc(p[0])} ${p[1]}</span>`));
+  (a.geo_top || []).slice(0, 3).forEach(g =>
+    tags.push(`<span class="tag" title="地区">${esc(g[0])} ${g[1]}</span>`));
+  tags.push(daysChip(a));
+  const pr = PROBE_BY_SLUG[a.slug];
+  if (pr && pr.n_sample) {
+    tags.push(pr.ok > 0
+      ? `<span class="tag ${pr.rate >= 0.5 ? 'up' : 'wn'}" title="TCP 探活（抽样）">活 ${pr.ok}/${pr.n_sample}${pr.rtt_avg_ms != null ? ' · ' + pr.rtt_avg_ms + 'ms' : ''}</span>`
+      : `<span class="tag er" title="TCP 探活全失败（可能仅客户端可达或已失效）">探活 0/${pr.n_sample}</span>`);
+  }
+  const age = a.age_h == null ? '' : (a.age_h < 1 ? `${Math.round(a.age_h * 60)} 分钟前` : `${(+a.age_h).toFixed(1)} 小时前`);
+  return `<div class="card ${st}" data-slug="${esc(a.slug)}" title="点击查看详情">
+    <div class="c-h"><span class="c-slug">${esc(a.slug)}</span>
+      <span class="c-badge">${a.nodes} 节点</span></div>
+    <div class="c-meta"><span>更新 ${esc(a.latest_local || '—')}</span><span>${esc(age)}</span></div>
+    ${usageHtml(a)}
+    <div class="tags">${tags.join('')}</div></div>`;
+}
+function paintKpi(d) {
+  const t = d.totals || {};
+  const k = [
+    ['机场', t.airports, '', 'ov'],
+    ['节点', t.nodes, '', 'ov'],
+    ['0 拉取', (t.zero_pull || []).length, (t.zero_pull || []).length ? 'warn' : '', 'ov:zero'],
+    ['已过期', (t.expired || []).length, (t.expired || []).length ? 'err' : '', 'ex'],
+    ['30 天内到期', (t.expiring30 || []).length, (t.expiring30 || []).length ? 'warn' : '', 'ex'],
+    ['华为命中', t.hits, t.hits ? 'err' : '', 'hw'],
+    ['数据滞后', (t.stale || []).length, (t.stale || []).length ? 'err' : '', 'ov:stale'],
+  ];
+  $('kpis').innerHTML = k.map(x =>
+    `<div class="kpi ${x[2]}" data-jump="${x[3] || ''}" title="点击查看"><b>${x[1] == null ? '—' : x[1]}</b><small>${x[0]}</small></div>`).join('');
+}
+function paintOverview(d) {
+  let list = (d.airports || []).slice();
+  const q = state.q.trim().toLowerCase();
+  if (q) list = list.filter(a => a.slug.toLowerCase().includes(q));
+  const t = d.totals || {};
+  const inSet = (s, arr) => (arr || []).includes(s);
+  if (state.f === 'delta') list = list.filter(a => a.added_n > 0 || a.removed_n > 0);
+  if (state.f === 'zero') list = list.filter(a => a.pull_zero || inSet(a.slug, t.zero_pull));
+  if (state.f === 'expiring') list = list.filter(a =>
+    a.quota && a.quota.days_left != null && a.quota.days_left <= 30);
+  if (state.f === 'hw') list = list.filter(a => a.hit_n > 0);
+  if (state.f === 'stale') list = list.filter(a => a.status === 'stale');
+  if (state.sort === 'nodes') list.sort((a, b) => b.nodes - a.nodes);
+  if (state.sort === 'expire') list.sort((a, b) =>
+    (a.quota && a.quota.days_left != null ? a.quota.days_left : 1e9) -
+    (b.quota && b.quota.days_left != null ? b.quota.days_left : 1e9));
+  if (state.sort === 'usage') list.sort((a, b) =>
+    ((b.quota && b.quota.used_pct) || 0) - ((a.quota && a.quota.used_pct) || 0));
+  $('grid').innerHTML = list.map(cardHtml).join('');
+  $('grid-empty').hidden = list.length > 0;
+}
+function paintExpire(d) {
+  const rows = (d.airports || []).filter(a => a.quota).sort((a, b) =>
+    (a.quota.days_left == null ? 1e9 : a.quota.days_left) -
+    (b.quota.days_left == null ? 1e9 : b.quota.days_left));
+  const cell = a => {
+    const q = a.quota, d = q.days_left;
+    let badge = '<span class="muted">长期</span>';
+    if (q.unlimited) badge = '<span class="muted">不限量</span>';
+    else if (d != null && d < 0) badge = `<span class="tag er">过期 ${-d} 天</span>`;
+    else if (d != null && d <= 30) badge = `<span class="tag wn">${d} 天</span>`;
+    else if (d != null) badge = `<span class="muted">${d} 天</span>`;
+    const p = Math.max(0, Math.min(100, q.used_pct || 0));
+    const cls = p > 90 ? 'e' : (p > 70 ? 'w' : '');
+    return `<tr><td style="font-weight:600">${esc(a.slug)}</td>
+      <td class="muted">${esc(q.expire_date || '—')}</td><td>${badge}</td>
+      <td class="num"><span class="mini-bar"><i class="${cls}" style="width:${p}%"></i></span><span class="muted">${p.toFixed(0)}%</span></td>
+      <td class="num muted">${(+q.used_gb || 0).toFixed(1)} / ${q.unlimited ? '∞' : (+q.total_gb || 0).toFixed(0)} GB</td></tr>`;
+  };
+  $('exp-t').innerHTML = '<tr><th>机场</th><th>到期日</th><th>剩余</th><th>用量</th><th>已用/总量</th></tr>'
+    + rows.map(cell).join('');
+  $('n-ex').textContent = rows.length ? String(rows.length) : '';
+}
+function paintAlerts(d) {
+  const q = String(state.alq || '').trim().toLowerCase();
+  let list = (d.alerts || []).slice(0, 200);
+  if (q) list = list.filter(a => a.airport && a.airport.toLowerCase().includes(q));
+  list = list.slice(0, 60);
+  $('al-list').innerHTML = list.length ? list.map(a =>
+    `<div class="row"><span class="k">${esc(a.ts_local || '')}</span>
+     <span class="v" style="font-weight:600;color:var(--tx)">${esc(a.airport)}</span>
+     ${a.added_n ? `<span class="tag up">+${a.added_n}</span>` : ''}
+     ${a.removed_n ? `<span class="tag dn">−${a.removed_n}</span>` : ''}
+     ${a.hw_n ? `<span class="tag acc">华为×${a.hw_n}</span>` : ''}
+     <span class="r muted">HW ${a.hw_n || 0}</span></div>`).join('')
+    : '<div class="empty">暂无告警</div>';
+  $('n-al').textContent = (d.alerts || []).length ? String(d.alerts.length) : '';
+}
+function paintHw(d) {
+  const cur = d.hw_current || [];
+  $('hw-cur').innerHTML = cur.length ? cur.map(f =>
+    `<div class="row"><span class="k">${esc(f.airport)}</span>
+     <span class="v">${esc(f.rule || '')}</span><span class="r muted">×${f.count || 1}</span></div>`).join('')
+    : '<div class="empty">当前无命中 ✓</div>';
+  const led = d.hw_ledger || [];
+  $('hw-ledger').innerHTML = led.length ? led.map(h =>
+    `<div class="row"><span class="k">${esc(h.airport)}</span>
+     <span class="v">${esc(h.rule)}<br><span class="muted" style="font-size:11px">${esc(h.evidence || '')}</span></span>
+     <span class="r muted">×${h.count} · ${esc(h.last_ts_local || '')}</span></div>`).join('')
+    : '<div class="empty">台账为空</div>';
+  $('n-hw').textContent = (led.length || cur.length) ? String(led.length) : '';
+}
+function paintRun(d) {
+  const r = d.runlog || {};
+  $('rn-inflight').innerHTML = r.inflight
+    ? '<div class="banner">新一轮检测进行中或上次未正常收尾（见 runlog.note）</div>' : '';
+  const chip = (arr, cls) => (arr || []).map(s => `<span class="tag ${cls || ''}">${esc(s)}</span>`).join('') || '<span class="muted">无</span>';
+  $('rn-box').innerHTML = `
+    <div class="row"><span class="k">时间</span><span class="v">${esc(r.start_local || '—')} → ${esc(r.done_local || '—')}（${r.duration_min == null ? '—' : (+r.duration_min).toFixed(1)} 分钟）</span></div>
+    <div class="row"><span class="k">规模</span><span class="v">机场 ${r.final_aps ?? '—'} · 节点 ${r.final_nodes ?? '—'}</span></div>
+    <div class="row"><span class="k">成功</span><span class="v">${r.ok_n ?? '—'} 个源 · ${r.ok_nodes ?? '—'} 节点</span></div>
+    <div class="row"><span class="k">0 拉取</span><span class="v tags">${chip(r.zero, 'wn')}</span></div>
+    <div class="row"><span class="k">需认证</span><span class="v tags">${chip(r.auth)}</span></div>
+    <div class="row"><span class="k">备注</span><span class="v muted" style="font-size:11px">${esc(r.note || '—')}</span></div>`;
+  const lr = LASTRUN;
+  $('rn-last').innerHTML = !lr || !lr.started_at
+    ? '<div class="muted" style="font-size:12px">无台账（升级前历史轮次没有 last_run.json；下一轮 run.py all 后出现）</div>'
+    : `
+    <div class="row"><span class="k">起止</span><span class="v">${esc(lr.started_at || '—')} → ${esc(lr.ended_at || '—')}（${lr.duration_s == null ? '—' : (+lr.duration_s).toFixed(0)} 秒）</span></div>
+    <div class="row"><span class="k">拉取</span><span class="v"><span class="tag up">成功 ${lr.pull_ok ?? '—'}</span> ${(lr.pull_fail || 0) ? `<span class="tag er">失败 ${lr.pull_fail}</span>` : '<span class="tag">失败 0</span>'}</span></div>
+    ${(lr.failed || []).length ? `<div class="row"><span class="k">失败明细</span><span class="v tags">${lr.failed.map(x => `<span class="tag er" title="${esc(x.reason || '')}">${esc(x.slug)}</span>`).join('')}</span></div>` : ''}
+    <div class="row"><span class="k">规模</span><span class="v">活跃机场 ${lr.airports_active ?? '—'} · 节点 ${lr.nodes_total ?? '—'} · 客户端扫描 ${lr.client_scanned ?? '—'} · 华为 ${lr.hw_findings ?? 0}</span></div>
+    <div class="row"><span class="k">陈旧>6h</span><span class="v tags">${(lr.stale_over_6h || []).length ? lr.stale_over_6h.map(s => `<span class="tag er">${esc(s)}</span>`).join('') : '<span class="tag up">无</span>'}</span></div>`;
+}
+function paint(d, src) {
+  PROBE_BY_SLUG = (d.probe && d.probe.per_airport) || {};
+  IDC_BY_SLUG = (d.idc && d.idc.per_airport) || {};
+  LASTRUN = d.lastrun || null;
+  paintKpi(d);
+  paintOverview(d); paintExpire(d); paintAlerts(d); paintHw(d); paintRun(d);
+  $('hd-base').textContent = '基准 ' + (d.base_local || '');
+  $('ft-gen').textContent = '生成于 ' + (d.generated_at || d.base_local || '—');
+  const s = $('ft-src');
+  s.textContent = src === 'live' ? '实时' : (src === 'fetch' ? 'data.json' : '内嵌快照');
+  s.className = 'src ' + (src === 'live' ? 'live' : (src === 'fetch' ? '' : 'snap'));
+  const t = d.totals || {};
+  const bad = (t.zero_pull || []).length || (t.expired || []).length || (t.stale || []).length || t.hits;
+  $('hd-dot').className = 'dot' + (bad ? (t.hits || (t.stale || []).length ? ' err' : ' warn') : '');
+  paintOverview(d);
+  if ($('n-nodes')) $('n-nodes').textContent = t.nodes != null ? String(t.nodes) : '';
+  if (state.tab === 'nodes') renderNodesTab(d);
+  if (state.tab === 'lib') renderLib(d);
+  if (state.tab === 'an') renderAnalysis(d);
+}
+
+/* ================= 交互 ================= */
+function switchTab(tab) {
+  document.querySelectorAll('.tab').forEach(x => x.classList.toggle('on', x.dataset.tab === tab));
+  state.tab = tab;
+  ['ov', 'ex', 'al', 'hw', 'nodes', 'lib', 'kn', 'an', 'rn'].forEach(k =>
+    $('tab-' + k).hidden = k !== tab);
+  if (tab === 'nodes') renderNodesTab(DATA || {});
+  if (tab === 'lib') renderLib(DATA || {});
+  if (tab === 'kn') renderKnowledge(DATA || {});
+  if (tab === 'an') renderAnalysis(DATA || {});
+}
+function setFilter(f) {
+  document.querySelectorAll('.fchip').forEach(x => x.classList.toggle('on', x.dataset.f === f));
+  state.f = f;
+  paintOverview(DATA);
+}
+$('tabs').addEventListener('click', e => {
+  const b = e.target.closest('.tab'); if (!b) return;
+  switchTab(b.dataset.tab);
+});
+/* 知识库列表 → 全文分节弹窗 */
+$('kn-body').addEventListener('click', e => {
+  const r = e.target.closest('[data-kn]'); if (!r) return;
+  openKnowledge(r.dataset.kn);
+});
+$('q').addEventListener('input', e => { state.q = e.target.value; paintOverview(DATA); });
+if ($('alq')) $('alq').addEventListener('input', e => { state.alq = e.target.value; paintAlerts(DATA); });
+$('sort').addEventListener('change', e => { state.sort = e.target.value; paintOverview(DATA); });
+$('filters').addEventListener('click', e => {
+  const b = e.target.closest('.fchip'); if (!b) return;
+  setFilter(b.dataset.f);
+});
+
+/* 详情弹窗：总览卡片 → 机场全字段 */
+function openDetail(slug) {
+  const d = DATA || {};
+  const a = (d.airports || []).find(x => x.slug === slug);
+  if (!a) return;
+  const q = a.quota || null;
+  const info = a.info || {};
+  const row = (k, v) => `<div class="row"><span class="k">${k}</span><span class="v">${v}</span></div>`;
+  const stTag = a.status === 'ok' ? '<span class="tag up">正常</span>'
+    : (a.status === 'stale' ? '<span class="tag er">数据滞后</span>' : '<span class="tag wn">观察</span>');
+  const age = a.age_h == null ? '' :
+    ` · ${a.age_h < 1 ? `${Math.round(a.age_h * 60)} 分钟前` : `${(+a.age_h).toFixed(1)} 小时前`}`;
+  const rows = [row('状态', stTag), row('节点数', `<b>${a.nodes}</b>`),
+    row('最近快照', `${esc(a.latest_local || '—')}${age}`),
+    row('近轮变更', `<span class="tag ${a.added_n > 0 ? 'up' : ''}">+${a.added_n || 0}</span> <span class="tag ${a.removed_n > 0 ? 'dn' : ''}">−${a.removed_n || 0}</span>`)];
+  if (info.panel) rows.push(row('面板', esc(info.panel)));
+  if (info.core) rows.push(row('内核', esc(info.core)));
+  if (info.enabled === false) rows.push(row('注册状态', '<span class="tag wn">已停用</span>'));
+  if (q) {
+    const dl = q.days_left;
+    const ex = q.unlimited ? '不限量' : `${esc(q.expire_date || '—')}${dl != null ? `（剩 ${dl} 天）` : ''}`;
+    rows.push(row('套餐', ex),
+      row('流量', q.unlimited ? '不限量' : `${(+q.used_gb || 0).toFixed(1)} / ${(+q.total_gb || 0).toFixed(0)} GB · ${(q.used_pct || 0).toFixed(0)}%`));
+  }
+  const protos = (a.proto_top || []).map(p => `<span class="tag">${esc(p[0])} ${p[1]}</span>`).join('');
+  const geos = (a.geo_top || []).map(g => `<span class="tag">${esc(g[0])} ${g[1]}</span>`).join('');
+  if (protos) rows.push(row('协议 Top', `<span class="tags">${protos}</span>`));
+  if (geos) rows.push(row('地区 Top', `<span class="tags">${geos}</span>`));
+  const pr = PROBE_BY_SLUG[slug];
+  if (pr && pr.n_sample) rows.push(row('探活',
+    `<span class="tag ${pr.ok > 0 ? (pr.rate >= 0.5 ? 'up' : 'wn') : 'er'}">${pr.ok}/${pr.n_sample}${pr.rtt_avg_ms != null ? ' · 平均 ' + pr.rtt_avg_ms + 'ms' : ''}</span>`
+    + (pr.dead && pr.dead.length ? ` <span class="muted" style="font-size:11px">失败样例：${esc(pr.dead.map(x => x.name || x.server).slice(0, 3).join('、'))}</span>` : '')));
+  const ic = IDC_BY_SLUG[slug];
+  if (ic && ic.score != null) rows.push(row('基建画像',
+    `<b>${ic.score}</b>（扇出 ${ic.max_fanout} · 高位端口 ${Math.round((ic.hi_port_pct || 0) * 100)}% · RDAP 集中 ${Math.round((ic.rdap_share || 0) * 100)}%）<span class="tag ${ic.level === '机场基建特征强' ? 'er' : (ic.level === '中性' ? 'wn' : '')}">${esc(ic.level || '')}</span>`));
+  /* 推荐站评测档案（jichangtuijian1.com 爬取的理论信息，related 命中即联动） */
+  const ar = (d.sites_digest || []).find(s => String(s.related || '').includes('已监控:' + slug));
+  if (ar) rows.push(row('推荐站评测',
+    `<span class="j-slug" data-arch="${esc(ar.name)}">${esc((ar.cat || '') + ' · ' + (ar.date || ''))}</span>`
+    + (ar.prices ? ` · 价格 <span class="muted" style="font-size:11px">${esc(ar.prices)}</span>` : '')
+    + (ar.protos ? ` · 协议 <span class="muted" style="font-size:11px">${esc(ar.protos)}</span>` : '')
+    + ' <span class="muted" style="font-size:11px">（点击看完整档案）</span>'));
+  const al = (d.alerts || []).filter(x => x.airport === slug).slice(0, 20);
+  const alHtml = al.length ? al.map(x =>
+    `<div class="row"><span class="k">${esc(x.ts_local || '')}</span><span class="v">${x.added_n ? `<span class="tag up">+${x.added_n}</span>` : ''}${x.removed_n ? `<span class="tag dn">−${x.removed_n}</span>` : ''}${x.hw_n ? `<span class="tag acc">华为×${x.hw_n}</span>` : ''}</span></div>`).join('')
+    : '<div class="muted" style="font-size:12px">近 60 条告警中无此机场</div>';
+  $('m-body').innerHTML = rows.join('')
+    + '<div class="m-sec" id="m-hist-sec">节点走势 <span id="m-spans">'
+    + [['16', '16轮'], ['24h', '24时'], ['7d', '7天'], ['30d', '30天']].map(([v, t]) =>
+        `<button class="span-b${v === '16' ? ' on' : ''}" data-span="${v}">${t}</button>`).join('')
+    + '</span></div><div class="hbars" id="m-hbars"><span class="spin"></span><span class="muted" style="font-size:12px">加载中…</span></div>'
+    + '<div class="m-sec">节点列表（最新非空快照）</div><div id="m-nodes"><span class="spin"></span><span class="muted" style="font-size:12px">加载节点…</span></div>'
+    + '<div class="m-sec">近期告警</div>' + alHtml;
+  $('m-title').textContent = slug;
+  state.histSpan = '16';
+  $('m-refresh').style.display = '';
+  $('modal').hidden = false;
+  fetchNodes(slug, '16');
+}
+
+/* 推荐站评测档案弹窗：jichangtuijian1.com 文章理论信息（名称/栏目/价格/协议/域名/与我方关系） */
+function openArchive(name) {
+  const d = DATA || {};
+  const s = (d.sites_digest || []).find(x => x.name === name);
+  if (!s) return;
+  const chips = (label, txt, cls) => txt
+    ? `<div class="row"><span class="k">${label}</span><span class="v"><span class="tags">${String(txt).split(/[,，;；]/).filter(Boolean).slice(0, 12).map(t => `<span class="tag ${cls || ''}">${esc(t.trim())}</span>`).join('')}</span></span></div>`
+    : '';
+  const rows = [
+    s.cat ? `<div class="row"><span class="k">栏目</span><span class="v">${esc(s.cat)}<span class="muted" style="font-size:11px"> · 评测日期 ${esc(s.date || '—')}</span></span></div>` : '',
+    s.title ? `<div class="row"><span class="k">文章</span><span class="v" style="white-space:normal">${esc(s.title)}</span></div>` : '',
+    s.prices ? chips('价格线索', s.prices, 'acc') : '',
+    s.free ? chips('免费线索', s.free, 'up') : '',
+    s.protos ? chips('支持协议', s.protos) : '',
+    s.nodes ? `<div class="row"><span class="k">文中节点</span><span class="v">${esc(s.nodes)}</span></div>` : '',
+    (s.doms && s.doms.length) ? `<div class="row"><span class="k">文内域名</span><span class="v"><span class="tags">${s.doms.map(x => `<span class="tag">${esc(x)}</span>`).join('')}</span></span></div>` : `<div class="row"><span class="k">文内域名</span><span class="v">—</span></div>`,
+  ];
+  const rel = String(s.related || '');
+  let relHtml = '<div class="row"><span class="k">与我方</span><span class="v">未监控（可在机场库接入）</span></div>';
+  if (rel.indexOf('已监控') === 0) {
+    const slugs = rel.split(',').map(x => x.replace(/^已监控:/, '').trim()).filter(Boolean).slice(0, 6);
+    relHtml = `<div class="row"><span class="k">与我方</span><span class="v"><span class="tags">${slugs.map(x => `<span class="tag up j-slug j-mon" data-mon="${esc(x)}" title="打开 ${esc(x)} 详情">${esc(x)}</span>`).join('')} <span class="muted" style="font-size:11px">已在监控</span></span></span></div>`;
+  }
+  $('m-title').textContent = name;
+  $('m-refresh').style.display = 'none';
+  $('m-body').innerHTML = rows.join('') + relHtml
+    + `<div class="note">信息来自机场推荐站公开评测文章（${esc(s.date || '')}），为理论画像仅供参考；域名已清洗但仍可能有广告噪声。接入按钮在机场库列表内。</div>`;
+  $('modal').hidden = false;
+}
+
+/* 知识库页：协议科普/行业知识分组列表 → openKnowledge 全文分节弹窗 */
+function renderKnowledge(d) {
+  const el = $('kn-body');
+  if (!el) return;
+  const list = d.knowledge || [];
+  if (!list.length) {
+    el.innerHTML = '<div class="note">知识库为空——先运行 <b>python -m airmon.knowledge</b> 生成 data/knowledge.json。</div>';
+    return;
+  }
+  const cats = {};
+  list.forEach(x => { (cats[x.cat] = cats[x.cat] || []).push(x); });
+  const CATS = ['协议科普', '行业知识'];
+  el.innerHTML = CATS.filter(c => cats[c]).map(c => `
+    <div class="panel-box" style="margin-bottom:12px">
+      <div class="pb-h">${c} <span class="muted" style="font-size:11px">${cats[c].length} 篇</span></div>
+      <div class="pb-b">
+        ${cats[c].map(x => `
+          <div class="row" style="cursor:pointer" data-kn="${esc(x.slug)}">
+            <span class="k">${esc(x.title)}</span>
+            <span class="v muted" style="font-size:11px">${esc(x.date || '')} · ${x.n_sections} 节</span>
+          </div>`).join('')}
+      </div>
+    </div>`).join('') + '<div class="note">来源：jichangtuijian1.com 科普栏目正文结构化摘录，仅供参考。</div>';
+}
+function openKnowledge(slug) {
+  const d = DATA || {};
+  const x = (d.knowledge || []).find(k => k.slug === slug);
+  if (!x) return;
+  const body = (x.sections || []).map(([h2, text]) => `
+    <div style="margin:10px 0 4px;font-weight:700;font-size:13px">${esc(h2)}</div>
+    <div style="white-space:pre-wrap;font-size:12.5px;line-height:1.7;color:var(--tx2,#444)">${esc(text)}</div>`).join('');
+  $('m-title').textContent = x.title;
+  $('m-refresh').style.display = 'none';
+  $('m-body').innerHTML = `<div class="row"><span class="k">${esc(x.cat)}</span><span class="v muted" style="font-size:11px">${esc(x.date || '')} · ${x.n_sections} 节${(x.doms && x.doms.length) ? ' · 文内域 ' + esc(x.doms.join(' ')) : ''}</span></div>`
+    + body
+    + '<div class="note">摘自机场推荐站科普栏目（正文分节截录），仅供理解原理，具体以机场官方与客户端实测为准。</div>';
+  $('modal').hidden = false;
+}
+/* 节点详情：postMessage 桥 → parent 代取 /api/nodes?slug=&span= */
+function fetchNodes(slug, span) {
+  let settled = false;
+  const reqId = 'n' + Date.now();
+  const onMsg = (e) => {
+    const d = e.data;
+    if (!d || d.type !== 'airmon:nodes' || d.id !== reqId) return;
+    settled = true;
+    window.removeEventListener('message', onMsg);
+    if ($('modal').hidden || $('m-title').textContent !== slug) return; // 已切走
+    renderNodes(d.payload);
+  };
+  window.addEventListener('message', onMsg);
+  try { window.parent.postMessage({ type: 'airmon:getnodes', id: reqId, slug, span: span || '16' }, '*'); } catch (_) {}
+  setTimeout(() => {
+    if (settled) return;
+    window.removeEventListener('message', onMsg);
+    if (!$('modal').hidden && $('m-title').textContent === slug) {
+      // 数据桥不可用（独立预览 / file:// 模式）：回落到当前 DATA 的 node_rows
+      const a = (DATA.airports || []).find(x => x.slug === slug);
+      const rows = (a && a.node_rows) || [];
+      if (rows.length) {
+        renderNodes({ nodes: rows, total: rows.length, span: '16',
+                      file_local: (a.latest_local || ''), note: 'embedded' });
+      } else {
+        $('m-nodes').innerHTML = '<div class="muted" style="font-size:12px">节点数据加载失败（数据桥不可用）</div>';
+      }
+    }
+  }, 6000);
+}
+const SPAN_LBL = { '16': '16 轮', '24h': '24 时', '7d': '7 天', '30d': '30 天（按日合并）' };
+function renderNodes(p) {
+  const hb = $('m-hbars');
+  const box = $('m-nodes');
+  if (!p || p.error || !p.nodes) {
+    if (hb) hb.innerHTML = '';
+    box.innerHTML = `<div class="muted" style="font-size:12px">无节点数据${p && p.error ? `（${esc(p.error)}）` : ''}</div>`;
+    return;
+  }
+  const h = p.history || [];
+  if (hb) {
+    if (h.length) {
+      const max = Math.max(1, ...h.map(x => x.n || 0));
+      hb.innerHTML = h.map(x =>
+        `<i class="${x.n ? '' : 'zero'}" style="height:${Math.max(4, Math.round((x.n || 0) / max * 100))}%" title="${esc(x.ts_local || x.ts)}：${x.n} 节点"></i>`).join('');
+    } else hb.innerHTML = '';
+  }
+  if (p.total === 0) {
+    box.innerHTML = `<div class="muted" style="font-size:12px">最新快照无节点${p.note ? `（${esc(p.note)}）` : ''}</div>`;
+    return;
+  }
+  const CAP = 300;
+  const rows = p.nodes.slice(0, CAP).map((n, i) =>
+    `<tr><td>${i + 1}</td><td>${esc(n.name)}</td><td>${esc(n.server)}</td><td>${esc(ipOf(n))}</td><td>${esc(n.port)}</td><td>${esc(n.protocol || '')}</td><td>${esc(n.cc || '')}</td></tr>`).join('');
+  const meta = `${p.file_local ? `数据时点 ${esc(p.file_local)} · ` : ''}共 ${p.total} 节点${p.total > CAP ? `（仅显示前 ${CAP} 个）` : ''} · 窗口 ${SPAN_LBL[p.span] || p.span || '16 轮'}${p.note === 'fallback-data' ? ' · 无走势（重启 DSH 后恢复）' : ''}${p.note === 'embedded' ? ' · 内嵌快照，无历史走势（独立预览模式）' : ''}`;
+  box.innerHTML = `<div class="muted" style="font-size:12px;margin:2px 0 4px">${meta}</div>
+    <table><thead><tr><th>#</th><th>名称</th><th>服务器</th><th>IP</th><th>端口</th><th>协议</th><th>地区</th></tr></thead><tbody>${rows}</tbody></table>`;
+}
+/* IP 列：优先解析 IP（raw._resolved_ips），server 本身是 IPv4 时直接用 */
+function ipOf(n) {
+  const s = String(n.server || '');
+  const v4 = /^(?:\d{1,3}\.){3}\d{1,3}$/.test(s);
+  if (n.r) return n.r;
+  if (v4) return s;
+  return '—';
+}
+
+/* ================= 节点总表（全部机场） ================= */
+function renderNodesTab(d) {
+  const sel = $('na');
+  if (!sel.options.length) {
+    sel.innerHTML = '<option value="">全部机场</option>' +
+      (d.airports || []).map(a => `<option value="${esc(a.slug)}">${esc(a.slug)}</option>`).join('');
+  }
+  const q = String(state.nq || '').toLowerCase();
+  const pick = sel.value;
+  let rows = [];
+  (d.airports || []).forEach(a => {
+    if (pick && a.slug !== pick) return;
+    (a.node_rows || []).forEach(n => rows.push({ slug: a.slug, n }));
+  });
+  const hit = rows.filter(r => !q || [r.n.name, r.n.server, r.n.r, r.n.protocol, r.slug]
+    .some(v => String(v || '').toLowerCase().includes(q)));
+  $('n-count').textContent = `${hit.length} / ${rows.length} 节点`;
+  const CAPN = 400;
+  $('nd-t').innerHTML = '<thead><tr><th>机场</th><th>名称</th><th>服务器</th><th>IP</th><th>端口</th><th>协议</th><th>地区</th></tr></thead><tbody>' +
+    hit.slice(0, CAPN).map(r =>
+      `<tr><td>${esc(r.slug)}</td><td>${esc(r.n.name)}</td><td>${esc(r.n.server)}</td><td>${esc(ipOf(r.n))}</td><td>${esc(r.n.port)}</td><td>${esc(r.n.protocol || '')}</td><td>${esc(r.n.cc || '')}</td></tr>`).join('') +
+    '</tbody>';
+  $('nd-note').textContent = hit.length > CAPN ? `仅显示前 ${CAPN} 条，请用搜索缩小范围` : '';
+}
+
+/* ================= 分析页（data/analysis.json，airmon.analyze 预计算） ================= */
+function barRows(list) {
+  /* 兼容两种形状：[[k,v],...] 与 [{slug,churn|zero_n|v},...]（analysis.json 的 churn/zero_rank 是对象数组） */
+  const norm = (list || []).map(x => {
+    if (Array.isArray(x)) return x;
+    const k = x.slug != null ? x.slug : (x.k != null ? x.k : '');
+    const v = x.churn != null ? x.churn : (x.zero_n != null ? x.zero_n : (x.v != null ? x.v : 0));
+    return [k, v];
+  });
+  const max = Math.max(1, ...norm.map(x => x[1] || 0));
+  return norm.map(([k, v]) =>
+    `<div class="row"><span class="k">${esc(k)}</span><span class="v">${v}</span>` +
+    `<span class="an-bar"><i style="width:${Math.max(2, Math.round((v || 0) / max * 100))}%"></i></span></div>`).join('');
+}
+function renderAnalysis(d) {
+  const an = d.analysis;
+  const note = $('an-note'), body = $('an-body');
+  if (!an) {
+    note.textContent = '';
+    body.innerHTML = '<div class="muted" style="font-size:12px;padding:8px">无分析数据：跑 <code>python -m airmon.analyze</code>（或等下一轮 run.py all 的 5.6 步自动生成）→ data/analysis.json</div>';
+    return;
+  }
+  note.textContent = `生成于 ${an.generated_at || '—'} · ${an.days || 30} 天窗口 · 基准 ${an.base_local || d.base_local || '—'}`;
+  const ts = an.timeseries || {};
+  const dates = ts.dates || [], totals = ts.totals || [];
+  let chart = '<div class="muted" style="font-size:12px">无时序数据</div>';
+  if (dates.length && dates.length === totals.length) {
+    const W = 600, H = 140, P = 6;
+    const max = Math.max(1, ...totals);
+    const X = i => P + i * (W - 2 * P) / Math.max(1, totals.length - 1);
+    const Y = n => H - P - (n / max) * (H - 2 * P);
+    const pts = totals.map((n, i) => `${X(i).toFixed(1)},${Y(n).toFixed(1)}`).join(' ');
+    const area = `${P},${H - P} ${pts} ${W - P},${H - P}`;
+    const peak = Math.max(...totals);
+    const peakI = totals.indexOf(peak);
+    chart =
+      `<div class="muted" style="font-size:11px;margin:0 0 2px;display:flex;justify-content:space-between">` +
+      `<span>${esc(dates[0])}</span><span>峰值 ${peak}（${esc(dates[peakI] || '')}）· 当前 ${totals[totals.length - 1]}</span><span>${esc(dates[dates.length - 1])}</span></div>` +
+      `<svg class="an-line" viewBox="0 0 ${W} ${H}" preserveAspectRatio="none">` +
+      `<polygon points="${area}" fill="rgba(59,130,246,.12)"></polygon>` +
+      `<polyline points="${pts}" fill="none" stroke="var(--brand)" stroke-width="2" vector-effect="non-scaling-stroke"></polyline></svg>`;
+  }
+  const rd = Object.entries(an.rdap || {})
+    .map(([slug, v]) => ({ slug, org: v.top_org, share: v.share, n: v.nodes }))
+    .filter(x => x.org).sort((a, b) => b.share - a.share).slice(0, 10);
+  const rdapHtml = rd.length
+    ? '<table class="ntab"><thead><tr><th>机场</th><th>机构</th><th>占比</th><th>节点</th></tr></thead><tbody>' +
+      rd.map(x => `<tr><td>${esc(x.slug)}</td><td>${esc(x.org)}</td><td>${Math.round(x.share * 100)}%</td><td>${x.n}</td></tr>`).join('') +
+      '</tbody></table><div class="muted" style="font-size:11px;margin-top:4px">占比高=入口基建集中；org 来自公开 RDAP 注册名。</div>'
+    : '<div class="muted" style="font-size:12px">无 RDAP 数据</div>';
+  const exp = an.expiry || [];
+  const neg = exp.filter(x => x.days_left < 0);
+  const b7 = exp.filter(x => x.days_left >= 0 && x.days_left <= 7);
+  const b30 = exp.filter(x => x.days_left > 7 && x.days_left <= 30);
+  const far = exp.filter(x => x.days_left > 30);
+  const unknown = Math.max(0, (d.totals && d.totals.airports || 0) - exp.length);
+  const chip = (slugs, cls) => slugs.slice(0, 8).map(s => `<span class="tag ${cls}">${esc(s)}</span>`).join('') +
+    (slugs.length > 8 ? `<span class="muted" style="font-size:11px">…等 ${slugs.length} 家</span>` : '');
+  const expHtml =
+    `<div class="an-exp">` +
+    `<div style="margin:2px 0 6px">已过期 <b>${neg.length}</b> · 7 天内 <b>${b7.length}</b> · 30 天内 <b>${b30.length}</b> · 更远 <b>${far.length}</b> · 未登记 <b>${unknown}</b></div>` +
+    (neg.length ? `<div style="margin-bottom:4px">${chip(neg.map(x => x.slug), 'er')}</div>` : '') +
+    (b7.length ? `<div>${chip(b7.map(x => x.slug), 'wn')}</div>` : '') +
+    `</div>`;
+  const probeHtml = (() => {
+    const pb = d.probe || {};
+    const rows = Object.entries(pb.per_airport || {})
+      .map(([slug, a]) => Object.assign({ slug }, a))
+      .sort((x, y) => (x.rate == null ? 2 : x.rate) - (y.rate == null ? 2 : y.rate));
+    if (!rows.length) return '';
+    const s = pb.summary || {};
+    return `<div class="panel-box" style="margin-top:10px"><div class="pb-h">节点探活（TCP 握手抽样 · ${esc(pb.generated_at || '—')} · 探针 ${s.probes ?? '—'} 通 ${s.ok_probes ?? '—'} · 存活机场 ${s.alive ?? '—'}/${s.airports ?? '—'}）</div>` +
+      `<div class="pb-b" style="max-height:40vh;overflow:auto"><table class="ntab"><thead><tr><th>机场</th><th>抽样</th><th>通</th><th>存活率</th><th>平均 RTT</th><th>失败样例</th></tr></thead><tbody>` +
+      rows.map(a => `<tr><td>${esc(a.slug)}</td><td>${a.n_sample ?? '—'}</td><td>${a.ok ?? '—'}</td>` +
+        `<td>${a.rate == null ? '—' : `<span class="tag ${a.rate >= 0.75 ? 'up' : (a.rate > 0 ? 'wn' : 'er')}">${Math.round(a.rate * 100)}%</span>`}</td>` +
+        `<td>${a.rtt_avg_ms == null ? '—' : a.rtt_avg_ms + ' ms'}</td>` +
+        `<td class="muted" style="font-size:11px">${esc((a.dead || []).map(x => x.name || x.server).slice(0, 3).join('、')) || '—'}</td></tr>`).join('') +
+      '</tbody></table><div class="muted" style="font-size:11px;margin-top:4px">仅 TCP 三层握手（不发代理流量）；全失败常见于仅客户端可达（CDN/专线）或节点已失效。失败样例≤3。</div></div></div>';
+  })();
+  const idcHtml = (() => {
+    const ig = d.idc || {};
+    const rows = Object.entries(ig.per_airport || {})
+      .map(([slug, a]) => Object.assign({ slug }, a))
+      .sort((x, y) => (y.score || 0) - (x.score || 0));
+    if (!rows.length) return '';
+    const lvl = s => s === '机场基建特征强' ? '<span class="tag er">强</span>'
+      : (s === '中性' ? '<span class="tag wn">中</span>' : '<span class="tag">低</span>');
+    return `<div class="panel-box" style="margin-top:10px"><div class="pb-h">机场基建画像（离线四指标 · ${esc(ig.generated_at || '—')}）</div>` +
+      `<div class="pb-b" style="max-height:40vh;overflow:auto"><table class="ntab"><thead><tr><th>机场</th><th>评分</th><th>最大扇出</th><th>高位端口</th><th>伪/批量TLD</th><th>RDAP集中</th><th>等级</th></tr></thead><tbody>` +
+      rows.slice(0, 30).map(a => `<tr><td>${esc(a.slug)}</td><td><b>${a.score ?? 0}</b></td>` +
+        `<td>${a.max_fanout ?? '—'}</td>` +
+        `<td>${a.hi_port_pct != null ? Math.round(a.hi_port_pct * 100) + '%' : '—'}</td>` +
+        `<td>${a.pseudo_tld_pct != null ? Math.round(((a.pseudo_tld_pct || 0) + (a.bulk_tld_pct || 0)) * 100) + '%' : '—'}</td>` +
+        `<td>${a.rdap_share != null ? Math.round(a.rdap_share * 100) + '%' : '—'}</td>` +
+        `<td>${lvl(a.level)}</td></tr>`).join('') +
+      '</tbody></table><div class="muted" style="font-size:11px;margin-top:4px">评分=30×入口扇出+25×高位端口占比+20×伪/批量TLD+25×RDAP集中度（0-100，≥70 记「强」）。纯离线统计，描述「像不像机场基建」，不是流量检测结论。</div></div></div>';
+  })();
+  const slugs = (d.airports || []).map(a => a.slug).sort();
+  const opt = sel => slugs.map(s => `<option value="${esc(s)}"${s === sel ? ' selected' : ''}>${esc(s)}</option>`).join('');
+  const cmpHtml = slugs.length
+    ? `<div class="panel-box" style="margin-top:10px"><div class="pb-h">机场对比</div><div class="pb-b">` +
+      `<div style="display:flex;gap:6px;align-items:center;margin-bottom:8px;flex-wrap:wrap">` +
+      `<select id="cmp-a" onchange="renderCompare()">${opt(state.cmpA || slugs[0])}</select>` +
+      `<span class="muted" style="font-size:11px">vs</span>` +
+      `<select id="cmp-b" onchange="renderCompare()">${opt(state.cmpB || slugs[1] || slugs[0])}</select>` +
+      `</div><div id="cmp-body"></div></div>`
+    : '';
+  body.innerHTML =
+    `<div class="pb-b">${chart}</div></div>` +
+    `<div class="an-grid">` +
+    `<div class="panel-box"><div class="pb-h">协议分布（当前）</div><div class="pb-b">${barRows(an.proto_global || [])}</div></div>` +
+    `<div class="panel-box"><div class="pb-h">地区分布（当前）</div><div class="pb-b">${barRows(an.geo_global || [])}</div></div>` +
+    `</div>` +
+    `<div class="an-grid">` +
+    `<div class="panel-box"><div class="pb-h">节点变动排行（累计 |增减|）</div><div class="pb-b">${barRows(an.churn || [])}</div></div>` +
+    `<div class="panel-box"><div class="pb-h">0 节点轮次 Top（${an.days || 30} 天）</div><div class="pb-b">${barRows(an.zero_rank || [])}</div></div>` +
+    `</div>` +
+    `<div class="an-grid">` +
+    `<div class="panel-box"><div class="pb-h">RDAP 机构集中度 Top10</div><div class="pb-b" style="max-height:34vh;overflow:auto">${rdapHtml}</div></div>` +
+    `<div class="panel-box"><div class="pb-h">套餐到期分布</div><div class="pb-b">${expHtml}</div></div>` +
+    `</div>` +
+    probeHtml + idcHtml + cmpHtml;
+  renderCompare();
+}
+
+/* ================= 机场对比 ================= */
+function renderCompare() {
+  const el = $('cmp-body');
+  if (!el) return;
+  const sa = $('cmp-a') ? $('cmp-a').value : state.cmpA;
+  const sb = $('cmp-b') ? $('cmp-b').value : state.cmpB;
+  state.cmpA = sa; state.cmpB = sb;
+  const d = DATA || {};
+  const A = (d.airports || []).find(x => x.slug === sa) || { slug: sa };
+  const B = (d.airports || []).find(x => x.slug === sb) || { slug: sb };
+  const tops = (arr, n) => (arr || []).slice(0, n).map(p => `${esc(p[0])} ${p[1]}`).join('、') || '—';
+  const prOf = s => { const p = PROBE_BY_SLUG[s]; return p && p.n_sample != null
+    ? `${p.ok}/${p.n_sample}${p.rtt_avg_ms != null ? ' · ' + p.rtt_avg_ms + 'ms' : ''}` : '—'; };
+  const icOf = s => { const p = IDC_BY_SLUG[s]; return p && p.score != null ? p.score : '—'; };
+  const qOf = a => {
+    const q = a.quota;
+    if (!q) return '—';
+    if (q.unlimited) return '不限量';
+    return q.days_left != null ? `剩 ${q.days_left} 天` : esc(q.expire_date || '—');
+  };
+  const stTag = a => a.status === 'ok' ? '<span class="tag up">正常</span>'
+    : (a.status === 'stale' ? '<span class="tag er">滞后</span>' : '<span class="tag wn">观察</span>');
+  const row = (k, va, vb) => `<div class="row"><span class="k">${k}</span><span class="v">${va}</span><span class="r">${vb}</span></div>`;
+  // 30 天双线走势（an.timeseries.by_slug）
+  const ts = (d.analysis && d.analysis.timeseries) || {};
+  const dates = ts.dates || [], by = ts.by_slug || {};
+  let chart = '';
+  if (dates.length && (by[sa] || by[sb])) {
+    const W = 560, H = 110, P = 6;
+    const sA = by[sa] || [], sB = by[sb] || [];
+    const all = sA.concat(sB).filter(n => typeof n === 'number');
+    const max = Math.max(1, ...all);
+    const X = i => P + i * (W - 2 * P) / Math.max(1, dates.length - 1);
+    const Y = n => H - P - (n / max) * (H - 2 * P);
+    const line = s => s.map((n, i) => `${X(i).toFixed(1)},${Y(typeof n === 'number' ? n : 0).toFixed(1)}`).join(' ');
+    const lbl = (s, c) => `<span class="tag" style="border-color:${c};color:${c}">${esc(s)}</span>`;
+    chart = `<svg class="an-line" viewBox="0 0 ${W} ${H}" preserveAspectRatio="none">` +
+      `<polyline points="${line(sA)}" fill="none" stroke="#3b82f6" stroke-width="2" vector-effect="non-scaling-stroke"></polyline>` +
+      `<polyline points="${line(sB)}" fill="none" stroke="#f59e0b" stroke-width="2" vector-effect="non-scaling-stroke" stroke-dasharray="5 3"></polyline></svg>` +
+      `<div style="display:flex;gap:6px;margin-top:2px">${lbl(sa, '#3b82f6')}${lbl(sb, '#f59e0b')}<span class="muted" style="font-size:11px">近 ${dates.length} 天 · 峰值 ${max}</span></div>`;
+  }
+  el.innerHTML = chart +
+    `<div style="margin-top:6px">` +
+    row('节点数', `<b>${A.nodes ?? '—'}</b>`, `<b>${B.nodes ?? '—'}</b>`) +
+    row('状态', stTag(A), stTag(B)) +
+    row('最近快照', esc(A.latest_local || '—'), esc(B.latest_local || '—')) +
+    row('协议 Top', `<span class="tags">${tops(A.proto_top, 4)}</span>`, `<span class="tags">${tops(B.proto_top, 4)}</span>`) +
+    row('地区 Top', `<span class="tags">${tops(A.geo_top, 4)}</span>`, `<span class="tags">${tops(B.geo_top, 4)}</span>`) +
+    row('探活', prOf(sa), prOf(sb)) +
+    row('画像分', icOf(sa), icOf(sb)) +
+    row('套餐', qOf(A), qOf(B)) +
+    `</div>`;
+}
+
+/* ================= 机场库 ================= */
+const ROUTE_LBL = { 'sub-url': '订阅', 'credential': '凭证登录', 'memory': '内存扫描',
+  'memory-scan': '内存扫描', 'persistent': '常驻扫描', 'profile': '客户端',
+  'page': '页面', 'cookie': 'Cookie', 'static': '静态', 'unknown': '—' };
+function renderLib(d) {
+  const q = String(state.lq || '').toLowerCase();
+  const mon = (d.airports || []).filter(a => !q || a.slug.includes(q) ||
+    (a.info && a.info.panel && String(a.info.panel).includes(q)));
+  $('lib-mon-n').textContent = `（${mon.length}）`;
+  $('lib-mon').innerHTML = '<thead><tr><th>机场</th><th>状态</th><th>节点</th><th>获取方式</th><th>面板域名</th><th>套餐到期</th><th>最近快照</th></tr></thead><tbody>' +
+    mon.slice(0, 60).map(a => {
+      const st = a.status === 'ok' ? '<span class="tag up">正常</span>'
+        : (a.status === 'stale' ? '<span class="tag er">滞后</span>' : '<span class="tag wn">观察</span>');
+      const dl = a.quota && a.quota.days_left != null
+        ? (a.quota.days_left < 0 ? `<span class="tag er">过期 ${Math.abs(a.quota.days_left)} 天</span>`
+          : (a.quota.days_left + ' 天'))
+        : '—';
+      return `<tr data-slug="${esc(a.slug)}"><td>${esc(a.slug)}</td><td>${st}</td><td>${a.nodes}</td><td>${esc(ROUTE_LBL[a.route] || a.route || '—')}</td><td>${esc((a.info && a.info.panel) || '—')}</td><td>${dl}</td><td>${esc(a.latest_local || '—')}</td></tr>`;
+    }).join('') + '</tbody>';
+  const fr = d.sites_free || [];
+  $('lib-free-n').textContent = `（${fr.length}）`;
+  $('lib-free').innerHTML = fr.length ? fr.map(s =>
+    `<div class="row"><span class="k"><span class="tag ${s.ok ? 'up' : 'er'}">${s.ok ? '活' : '挂'}</span> ${esc(s.name)}</span><span class="v">${esc(s.url || '')}${s.note ? ` · ${esc(s.note)}` : ''}</span></div>`).join('')
+    : '<div class="muted" style="font-size:12px">无数据（跑 python -m airmon.sitewatch 生成）</div>';
+  const sg = (d.sites_digest || []).filter(s => !q ||
+    String(s.name || '').toLowerCase().includes(q) || String(s.dom0 || '').includes(q));
+  $('lib-sites-n').textContent = `（${sg.length}）`;
+  $('lib-sites').innerHTML = '<thead><tr><th>机场</th><th>栏目</th><th>主域名</th><th>价格线索</th><th>免费</th><th>文章日期</th><th>操作</th></tr></thead><tbody>' +
+    sg.slice(0, 400).map(s =>
+      `<tr data-arch="${esc(s.name)}" title="点击查看推荐站评测档案"><td>${esc(s.name)}</td><td>${esc(s.cat)}</td><td>${esc(s.dom0 || '—')}</td><td>${esc(s.prices || '—')}</td><td>${esc(s.free || '')}</td><td>${esc(s.date || '')}</td><td>${s.dom0 ? `<button class="btn xs adopt" data-name="${esc(slugOf(s))}" data-panel="${esc(s.dom0)}" data-label="${esc(s.name)}">接入</button>` : '—'}</td></tr>`).join('') + '</tbody>';
+}
+/* 推荐站 → 监控：由名称/域名派生合规 slug（host 侧仍会强校验） */
+function slugOf(s) {
+  const n = String(s.name || '').toLowerCase().replace(/[^a-z0-9]+/g, '');
+  if (n.length >= 2 && /^[a-z0-9]/.test(n)) return n.slice(0, 30);
+  const dom = String(s.dom0 || '').split(/[.:]/)[0].replace(/[^a-z0-9]/g, '');
+  return (dom || 'airport').slice(0, 30);
+}
+
+/* ================= 检测触发（桥 + 轮询） ================= */
+function bridgeRequest(type, extra) {
+  return new Promise(res => {
+    const id = 'r' + Date.now() + Math.random().toString(36).slice(2, 6);
+    const onMsg = (e) => {
+      const d = e.data;
+      if (!d || d.id !== id) return;
+      window.removeEventListener('message', onMsg);
+      res(d.payload);
+    };
+    window.addEventListener('message', onMsg);
+    try { window.parent.postMessage(Object.assign({ type, id }, extra || {}), '*'); } catch (_) { res(null); }
+    setTimeout(() => { window.removeEventListener('message', onMsg); res(null); }, 8000);
+  });
+}
+let pollT = null;
+async function triggerRefresh(slug) {
+  const r = await bridgeRequest('airmon:refresh', { slug });
+  if (!r) { toast('检测触发不可用：需重启 DSH 启用新路由'); return; }
+  if (r.error) {
+    const msg = { busy: '已有采集任务在跑', cooldown: '冷却中，稍后再试',
+      'bad-slug': '机场名不合法' }[r.error] || ('触发失败：' + r.error);
+    toast(msg); return;
+  }
+  toast(slug === 'all' ? '已触发全量采集（订阅型机场，约 15-30 分钟）' : `已触发 ${slug} 采集，结果稍后自动刷新`);
+  pollRefresh();
+}
+function pollRefresh() {
+  clearInterval(pollT);
+  pollT = setInterval(async () => {
+    const s = await bridgeRequest('airmon:refreshstatus', {});
+    if (!s) { clearInterval(pollT); $('refresh-all').textContent = '刷新全部'; return; }
+    if (s.running || s.inflight) {
+      $('refresh-all').textContent = '采集中' + (s.progress ? ` ${s.progress}` : '…');
+      return;
+    }
+    clearInterval(pollT);
+    $('refresh-all').textContent = '刷新全部';
+    const fails = (s.jobs || []).filter(j => j.state === 'fail' || j.state === 'skipped');
+    toast(fails.length ? `采集完成：${s.jobs.length - fails.length} 成功，${fails.length} 未成功（${fails.slice(0, 3).map(j => j.slug).join('、')}）`
+      : `采集完成（${(s.jobs || []).length} 个机场），数据已刷新`);
+    loadData(true);
+  }, 5000);
+}
+let toastT = null;
+function toast(msg) {
+  let el = $('toast');
+  if (!el) { el = document.createElement('div'); el.id = 'toast'; el.className = 'toast'; document.body.appendChild(el); }
+  el.textContent = msg; el.hidden = false;
+  clearTimeout(toastT); toastT = setTimeout(() => { el.hidden = true; }, 4200);
+}
+function closeDetail() { $('modal').hidden = true; }
+$('grid').addEventListener('click', e => {
+  const c = e.target.closest('.card'); if (!c) return;
+  openDetail(c.dataset.slug);
+});
+$('kpis').addEventListener('click', e => {
+  const k = e.target.closest('.kpi'); if (!k) return;
+  const j = k.dataset.jump; if (!j) return;
+  const [tab, filter] = j.split(':');
+  switchTab(tab);
+  if (filter) setFilter(filter);
+});
+$('m-x').addEventListener('click', closeDetail);
+$('m-refresh').addEventListener('click', () => triggerRefresh($('m-title').textContent));
+$('refresh-all').addEventListener('click', () => triggerRefresh('all'));
+$('nq').addEventListener('input', e => { state.nq = e.target.value; renderNodesTab(DATA || {}); });
+$('na').addEventListener('change', () => renderNodesTab(DATA || {}));
+$('lq').addEventListener('input', e => { state.lq = e.target.value; renderLib(DATA || {}); });
+$('lib-mon').addEventListener('click', e => {
+  const t = e.target.closest('tr[data-slug]'); if (t) openDetail(t.dataset.slug);
+});
+/* 推荐站一键接入：确认 → 桥 → run.py add-airport（写 airports.yaml，下轮采集生效）；点行=档案弹窗 */
+$('lib-sites').addEventListener('click', async e => {
+  const b0 = e.target.closest('button.adopt');
+  if (!b0) {
+    const tr = e.target.closest('tr[data-arch]');
+    if (tr) { openArchive(tr.dataset.arch); return; }
+    return;
+  }
+  const b = b0;
+  e.stopPropagation();
+  const name = b.dataset.name, panel = b.dataset.panel, label = b.dataset.label || name;
+  if (!window.confirm(`把「${label}」接入监控？\n面板域名：${panel}\n将执行 run.py add-airport --name ${name} --panel https://${panel}，写入 airports.yaml 后参与下一轮采集。`)) return;
+  b.disabled = true; b.textContent = '接入中…';
+  const r = await bridgeRequest('airmon:adopt', { name, panel });
+  b.disabled = false; b.textContent = '接入';
+  if (!r) { toast('接入不可用：需重启 DSH 启用新路由'); return; }
+  if (r.error) {
+    toast({ 'bad-name': '机场名不合法（改用英文名）', 'bad-panel': '域名不合法', 'cooldown': '刚接入过，冷却 2 分钟', 'booting': '服务启动中，稍后再试' }[r.error] || ('接入失败：' + r.error));
+    return;
+  }
+  toast(`已开始接入 ${r.started}（${r.panel}）：add-airport 校验通过后写盘，下一轮采集自动纳入。可用「机场库→监控中」搜索确认。`);
+  setTimeout(() => loadData(true), 3000);
+});
+/* 弹窗走势窗口切换（m-body 委托，标题区每次打开重建）+ 评测档案/监控跳转 */
+$('m-body').addEventListener('click', e => {
+  const j = e.target.closest('.j-slug');
+  if (j && j.dataset.arch) { openArchive(j.dataset.arch); return; }
+  if (j && j.dataset.mon) { openDetail(j.dataset.mon); return; }
+  const b = e.target.closest('.span-b'); if (!b) return;
+  const span = b.dataset.span;
+  document.querySelectorAll('#m-spans .span-b').forEach(x => x.classList.toggle('on', x === b));
+  state.histSpan = span;
+  const slug = $('m-title').textContent;
+  $('m-hbars').innerHTML = '<span class="spin"></span><span class="muted" style="font-size:12px">加载中…</span>';
+  fetchNodes(slug, span);
+});
+$('modal').addEventListener('click', e => { if (e.target === $('modal')) closeDetail(); });
+document.addEventListener('keydown', e => { if (e.key === 'Escape') closeDetail(); });
+
+/* 启动：先内嵌快照立即渲染，再尝试升级到实时数据 */
+
+  if (!DATA || !DATA.airports || !DATA.airports.length) {
+    const tip = document.createElement('div');
+    tip.style.cssText = 'margin:30px auto;max-width:560px;padding:24px;border:1px solid #e5e7eb;border-radius:10px;font-size:13px;line-height:1.8';
+    tip.innerHTML = '<b>模板版面板（未内嵌数据）</b><br>这是 @local/airmon-sidebar 的发布版，不含任何监控数据。<br><br>1. 在 DSH 的 Agent 窗口左侧打开本面板 → 自动读取本机数据（postMessage 桥）<br>2. 或在同目录放 data.json（由 GET /airmon-sidebar/api/data 导出）供独立预览<br>3. 数据由本机 airmon 监控管线生成，路径可用环境变量 AIRMON_* 配置';
+    document.querySelector('main').prepend(tip);
+  }
+
+paint(EMBED, 'embedded');
+loadData(true);
+</script>
+</body>
+</html>
