@@ -696,7 +696,7 @@ function renderKnowledge(d) {
   }
   const cats = {};
   list.forEach(x => { (cats[x.cat] = cats[x.cat] || []).push(x); });
-  const CATS = ['协议科普', '行业知识'];
+  const CATS = ['协议科普', '行业知识', '检测研究'];
   el.innerHTML = CATS.filter(c => cats[c]).map(c => `
     <div class="panel-box" style="margin-bottom:12px">
       <div class="pb-h">${c} <span class="muted" style="font-size:11px">${cats[c].length} 篇</span></div>
@@ -707,7 +707,7 @@ function renderKnowledge(d) {
             <span class="v muted" style="font-size:11px">${esc(x.date || '')} · ${x.n_sections} 节</span>
           </div>`).join('')}
       </div>
-    </div>`).join('') + '<div class="note">来源：jichangtuijian1.com 科普栏目正文结构化摘录，仅供参考。</div>';
+    </div>`).join('') + '<div class="note">来源：推荐站科普栏目正文摘录 + 检测研究内置篇（WSL 研究提炼），仅供参考。</div>';
 }
 function openKnowledge(slug) {
   const d = DATA || {};
@@ -1145,14 +1145,6 @@ $('modal').addEventListener('click', e => { if (e.target === $('modal')) closeDe
 document.addEventListener('keydown', e => { if (e.key === 'Escape') closeDetail(); });
 
 /* 启动：先内嵌快照立即渲染，再尝试升级到实时数据 */
-
-  if (!DATA || !DATA.airports || !DATA.airports.length) {
-    const tip = document.createElement('div');
-    tip.style.cssText = 'margin:30px auto;max-width:560px;padding:24px;border:1px solid #e5e7eb;border-radius:10px;font-size:13px;line-height:1.8';
-    tip.innerHTML = '<b>模板版面板（未内嵌数据）</b><br>这是 @local/airmon-sidebar 的发布版，不含任何监控数据。<br><br>1. 在 DSH 的 Agent 窗口左侧打开本面板 → 自动读取本机数据（postMessage 桥）<br>2. 或在同目录放 data.json（由 GET /airmon-sidebar/api/data 导出）供独立预览<br>3. 数据由本机 airmon 监控管线生成，路径可用环境变量 AIRMON_* 配置';
-    document.querySelector('main').prepend(tip);
-  }
-
 paint(EMBED, 'embedded');
 loadData(true);
 </script>

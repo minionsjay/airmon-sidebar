@@ -1,6 +1,6 @@
 {
   "name": "@local/airmon-sidebar",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "type": "module",
   "description": "airmon 机场监控侧边栏面板：KPI/卡片详情(节点/IP/走势/探活/画像)/到期/告警/华为/节点总表/机场库(免费候选+评测档案+一键接入)/知识库/分析对比/运行台账",
   "icon": "./icon.svg",
